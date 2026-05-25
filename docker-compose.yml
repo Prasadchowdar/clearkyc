@@ -1,0 +1,45 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: clearkyc
+      POSTGRES_PASSWORD: clearkyc
+      POSTGRES_DB: clearkyc
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clearkyc"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://clearkyc:clearkyc@db:5432/clearkyc
+      # Providers default to free/offline/deterministic for cheap demos + evals.
+      EXTRACTOR: ${EXTRACTOR:-mock}     # mock | openai
+      EMBEDDER: ${EMBEDDER:-mock}       # mock | openai
+      REASONER: ${REASONER:-rules}      # rules | openai
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
+      OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      FIXTURES_DIR: /srv/fixtures
+    ports:
+      # Host port is assigned by the preview manager (PORT); defaults to 8000
+      # for plain `docker compose up`. Container always listens on 8000.
+      - "${PORT:-8000}:8000"
+    volumes:
+      # Mock "documents" are JSON fixtures; mount them read-only for demos.
+      - ./fixtures:/srv/fixtures:ro
+      # User-uploaded document images (writable).
+      - ./uploads:/srv/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

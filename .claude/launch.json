@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "clearkyc-stack",
+      "runtimeExecutable": "docker",
+      "runtimeArgs": ["compose", "up", "--build"],
+      "port": 8000,
+      "autoPort": true
+    },
+    {
+      "name": "clearkyc-api",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "app"],
+      "port": 8000,
+      "autoPort": true
+    }
+  ]
+}

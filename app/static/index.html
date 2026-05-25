@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ClearKYC — Reviewer Console</title>
+<style>
+  :root {
+    --bg:#0f1115; --panel:#171a21; --line:#262b36; --txt:#e6e9ef; --mut:#9aa4b2;
+    --green:#1f9d57; --amber:#c98a14; --red:#c0392b; --blue:#3b6ef0;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt);
+    font:14px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
+  header { padding:18px 26px; border-bottom:1px solid var(--line); }
+  header h1 { font-size:18px; margin:0; display:inline; }
+  header .sub { color:var(--mut); font-size:13px; margin-left:12px; }
+  main { max-width:880px; margin:0 auto; padding:24px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:18px 20px; margin-bottom:18px; }
+  h2 { font-size:15px; margin:0 0 14px; }
+  h3 { font-size:13px; text-transform:uppercase; letter-spacing:.04em;
+    color:var(--mut); margin:18px 0 8px; }
+  label { display:block; font-size:12.5px; color:var(--mut); margin:10px 0 4px; }
+  input[type=text] { width:100%; background:#11141a; border:1px solid var(--line);
+    color:var(--txt); border-radius:8px; padding:9px 11px; font-size:14px; }
+  .uploads { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .drop { border:1px dashed var(--line); border-radius:10px; padding:14px;
+    background:#11141a; }
+  .drop .t { font-weight:600; font-size:13px; }
+  .drop .t span { color:var(--mut); font-weight:400; }
+  input[type=file] { font-size:12px; color:var(--mut); margin-top:8px; max-width:100%; }
+  .drop.has { border-color:var(--green); }
+  button { background:var(--panel); color:var(--txt); border:1px solid var(--line);
+    padding:10px 16px; border-radius:8px; cursor:pointer; font-size:13px; }
+  button:hover { border-color:var(--blue); }
+  button.primary { background:var(--blue); border-color:var(--blue); font-weight:600; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .actions-row { margin-top:16px; display:flex; gap:10px; align-items:center; }
+  .samples { margin-top:14px; font-size:12px; color:var(--mut); }
+  .samples button { padding:5px 10px; font-size:12px; }
+  .badge { padding:4px 12px; border-radius:999px; font-weight:600; font-size:13px; }
+  .APPROVE { background:rgba(31,157,87,.15); color:#54d98c; border:1px solid var(--green); }
+  .NEEDS_FIX { background:rgba(201,138,20,.15); color:#f0b94a; border:1px solid var(--amber); }
+  .REJECT { background:rgba(192,57,43,.15); color:#ef6b5d; border:1px solid var(--red); }
+  .row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .meta { color:var(--mut); font-size:13px; }
+  .msg { background:#11141a; border:1px dashed var(--line); border-radius:8px;
+    padding:12px 14px; color:#cfd6e2; }
+  .reason { border-left:3px solid var(--amber); padding:8px 12px; margin:8px 0;
+    background:#12151c; border-radius:0 8px 8px 0; }
+  .cite { color:var(--mut); font-size:12px; margin-top:4px; }
+  .cite b { color:#8fb0ff; font-weight:600; }
+  ul.actions { margin:6px 0 0; padding-left:18px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th,td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--mut); font-weight:600; }
+  .sev-HIGH { color:#ef6b5d; } .sev-MEDIUM { color:#f0b94a; } .sev-LOW { color:#54d98c; }
+  .timeline { font-size:12.5px; color:var(--mut); }
+  .timeline .ev { padding:4px 0; border-bottom:1px dotted var(--line); }
+  .timeline .ev b { color:var(--txt); }
+  .hitl { display:flex; gap:10px; margin-top:14px; }
+  .pending { color:#f0b94a; } .cleared { color:#54d98c; }
+  .spinner { display:inline-block; width:16px; height:16px; border:2px solid var(--line);
+    border-top-color:var(--blue); border-radius:50%; animation:spin .8s linear infinite;
+    vertical-align:middle; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .status { color:var(--mut); font-size:13px; }
+  .err { color:#ef6b5d; }
+</style>
+</head>
+<body>
+<header>
+  <h1>ClearKYC</h1><span class="sub">Merchant Risk &amp; Compliance Copilot</span>
+</header>
+<main>
+  <div class="card">
+    <h2>Run a KYC check on real documents</h2>
+    <label>Merchant / business name (optional)</label>
+    <input type="text" id="merchant" placeholder="e.g. Acme Private Limited" />
+    <h3>Upload documents</h3>
+    <div class="uploads">
+      <div class="drop" id="drop-PAN"><div class="t">PAN <span>(required)</span></div>
+        <input type="file" accept="image/*" data-type="PAN" onchange="mark(this)"></div>
+      <div class="drop" id="drop-BANK"><div class="t">Bank proof <span>(required)</span></div>
+        <input type="file" accept="image/*" data-type="BANK" onchange="mark(this)"></div>
+      <div class="drop" id="drop-GST"><div class="t">GST <span>(optional)</span></div>
+        <input type="file" accept="image/*" data-type="GST" onchange="mark(this)"></div>
+      <div class="drop" id="drop-REG"><div class="t">Registration <span>(optional)</span></div>
+        <input type="file" accept="image/*" data-type="REG" onchange="mark(this)"></div>
+    </div>
+    <div class="actions-row">
+      <button class="primary" id="run" onclick="runUpload()">Run KYC check</button>
+      <span class="status" id="status"></span>
+    </div>
+    <div class="samples">No documents handy? Try a sample:
+      <button onclick="runDemo('clean')">Clean</button>
+      <button onclick="runDemo('mismatch')">Name mismatch</button>
+      <button onclick="runDemo('missing')">Missing doc</button>
+    </div>
+  </div>
+  <div id="out"></div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+function mark(inp){ $("drop-"+inp.dataset.type).classList.toggle("has", inp.files.length>0); }
+function setStatus(html){ $("status").innerHTML = html; }
+function busy(on){ $("run").disabled = on; }
+
+async function runUpload() {
+  const files = [...document.querySelectorAll('input[type=file]')].filter(i => i.files.length);
+  const hasPAN = files.some(i => i.dataset.type === "PAN");
+  if (!hasPAN) { setStatus('<span class="err">Please upload at least a PAN image.</span>'); return; }
+  busy(true); $("out").innerHTML = "";
+  try {
+    setStatus('<span class="spinner"></span> creating case…');
+    const merchant = $("merchant").value.trim() || "Uploaded Merchant";
+    const c0 = await (await fetch("/cases", {method:"POST", headers:{"content-type":"application/json"},
+      body: JSON.stringify({merchant_id: merchant, type:"ONBOARD"})})).json();
+    for (const inp of files) {
+      setStatus(`<span class="spinner"></span> uploading ${inp.dataset.type}…`);
+      const fd = new FormData(); fd.append("type", inp.dataset.type); fd.append("file", inp.files[0]);
+      await fetch(`/cases/${c0.case_id}/documents/upload`, {method:"POST", body: fd});
+    }
+    setStatus('<span class="spinner"></span> reading documents with AI &amp; checking compliance… (this can take a few seconds)');
+    await fetch(`/cases/${c0.case_id}/decide`, {method:"POST"});
+    await showCase(c0.case_id);
+    setStatus("");
+  } catch (e) {
+    setStatus('<span class="err">Something went wrong: '+esc(e.message)+'</span>');
+  } finally { busy(false); }
+}
+
+async function runDemo(scenario) {
+  busy(true); $("out").innerHTML = "";
+  setStatus('<span class="spinner"></span> running sample…');
+  try {
+    const c = await (await fetch(`/demo/${scenario}`, {method:"POST"})).json();
+    await showCase(c.case_id);
+    setStatus("");
+  } catch(e){ setStatus('<span class="err">'+esc(e.message)+'</span>'); }
+  finally { busy(false); }
+}
+
+async function showCase(caseId) {
+  const [c, findings, audit] = await Promise.all([
+    fetch(`/cases/${caseId}`).then(r=>r.json()),
+    fetch(`/cases/${caseId}/findings`).then(r=>r.json()),
+    fetch(`/cases/${caseId}/audit`).then(r=>r.json()),
+  ]);
+  render(c, findings, audit);
+}
+
+function render(c, findings, audit) {
+  const d = c.decisions[c.decisions.length - 1];
+  const reasons = (d.reasons||[]).map(r => {
+    const cit = r.citation ? `<div class="cite">grounded in <b>${esc(r.citation.rule_id)}</b> — ${esc(r.citation.source)}<br>${esc(r.citation.snippet)}</div>` : "";
+    return `<div class="reason"><div>${esc(r.detail)}</div>${cit}</div>`;
+  }).join("");
+  const actions = (d.required_actions||[]).map(a=>`<li>${esc(a)}</li>`).join("");
+  const findRows = findings.length ? findings.map(f =>
+    `<tr><td>${esc(f.code)}</td><td class="sev-${esc(f.severity)}">${esc(f.severity)}</td><td>${esc(f.detail)}</td><td>${esc(f.rule)}</td></tr>`
+  ).join("") : `<tr><td colspan="4" class="meta">No findings — documents are consistent and valid.</td></tr>`;
+  const events = audit.map(e =>
+    `<div class="ev"><b>${esc(e.actor)}</b> · ${esc(e.action)} <span style="float:right">${esc(e.ts.replace('T',' ').slice(0,19))}</span></div>`
+  ).join("");
+  const hs = d.human_status;
+  const hitl = hs === "PENDING"
+    ? `<div class="hitl">
+         <button class="primary" onclick="review('${d.decision_id}','${c.case_id}','APPROVE')">Approve decision</button>
+         <button onclick="review('${d.decision_id}','${c.case_id}','OVERRIDE')">Override</button></div>`
+    : `<div class="meta" style="margin-top:12px">Human status: <b class="${hs==='AUTO_CLEARED'?'cleared':''}">${esc(hs)}</b></div>`;
+
+  $("out").innerHTML = `
+    <div class="card">
+      <div class="row">
+        <span class="badge ${esc(d.verdict)}">${esc(d.verdict)}</span>
+        <span class="meta">confidence ${(d.confidence*100).toFixed(0)}% · engine ${esc(d.engine_version)}</span>
+        <span class="meta" style="margin-left:auto">${esc(c.merchant_id)} · ${esc(c.case_id.slice(0,8))}</span>
+      </div>
+      <h3>Drafted merchant message</h3>
+      <div class="msg">${esc(d.drafted_message)}</div>
+      ${reasons ? `<h3>Why (grounded reasons)</h3>${reasons}` : ""}
+      ${actions ? `<h3>Required actions</h3><ul class="actions">${actions}</ul>` : ""}
+      ${hitl}
+    </div>
+    <div class="card"><h3>Risk findings</h3>
+      <table><thead><tr><th>Code</th><th>Severity</th><th>Detail</th><th>Rule</th></tr></thead>
+      <tbody>${findRows}</tbody></table></div>
+    <div class="card"><h3>What was extracted from your documents</h3>
+      <table><thead><tr><th>Document</th><th>Quality</th></tr></thead><tbody>
+      ${c.documents.map(x=>`<tr><td>${esc(x.type)}</td><td>${x.quality_score==null?'—':(x.quality_score*100).toFixed(0)+'%'}</td></tr>`).join("")}
+      </tbody></table></div>
+    <div class="card"><h3>Audit trail (append-only)</h3>
+      <div class="timeline">${events}</div></div>`;
+}
+
+async function review(decisionId, caseId, action) {
+  await fetch(`/decisions/${decisionId}/review`, {method:"POST", headers:{"content-type":"application/json"},
+    body: JSON.stringify({action, reviewer:"console", note:"reviewed in console"})});
+  await showCase(caseId);
+}
+
+// Deep links: /ui/?case=<id> renders an existing case; /ui/?run=<scenario> runs a sample.
+(() => {
+  const p = new URLSearchParams(location.search);
+  if (p.get("case")) showCase(p.get("case"));
+  else if (p.get("run")) runDemo(p.get("run"));
+})();
+</script>
+</body>
+</html>
